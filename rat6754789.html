@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AviAn Premium Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        /* Apnar original styles gulo ekhane thakbe */
+        @import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Poppins:wght@300;400;600&display=swap');
+        body { background: #000b1e; color: white; font-family: 'Poppins', sans-serif; overflow-x: hidden; margin: 0; }
+        .premium-font { font-family: 'Syncopate', sans-serif; letter-spacing: 0.1em; }
+        .bright-blue { color: #0084ff; }
+        .bg-bright-blue { background: #0084ff; }
+        .glass { background: rgba(0, 132, 255, 0.05); backdrop-filter: blur(25px); border: 1px solid rgba(0, 132, 255, 0.2); }
+        .avian-style { font-family: 'Syncopate', sans-serif; font-size: 1.4rem; background: linear-gradient(to bottom, #fde68a, #b45309); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; display: block; padding: 15px 0; filter: drop-shadow(0 0 5px rgba(180, 83, 9, 0.5)); }
+        #splash-screen { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .exclusive-orb { width: 120px; height: 120px; border: 3px solid #b45309; box-shadow: 0 0 20px rgba(180, 83, 9, 0.6); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; position: relative; }
+        .exclusive-orb::after { content: 'A'; font-family: 'Syncopate'; font-size: 3rem; color: #fde68a; filter: drop-shadow(0 0 10px #b45309); }
+        .trending-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); z-index: 10000; width: 85%; max-width: 320px; visibility: hidden; opacity: 0; transition: all 0.3s; }
+        .trending-popup.show { visibility: visible; opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        .close-icon { position: absolute; top: 15px; right: 20px; font-size: 24px; color: #0084ff; cursor: pointer; }
+        .banner-container { position: relative; width: 100%; height: 200px; overflow: hidden; border-radius: 30px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .banner-bg-layer { position: absolute; width: 300%; height: 100%; display: flex; z-index: 1; transition: transform 0.8s cubic-bezier(0.45, 0, 0.55, 1); }
+        .bg-slide { width: 33.33%; height: 100%; background-size: 400% 400%; animation: gradientBG 10s ease infinite; }
+        .bg-slide-1 { background: linear-gradient(135deg, #001f3f, #0084ff); }
+        .bg-slide-2 { background: linear-gradient(135deg, #1e003f, #9b00ff); }
+        .bg-slide-3 { background: linear-gradient(135deg, #003f1e, #00ff84); }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .banner-cutout-layer { position: absolute; width: 300%; height: 100%; display: flex; align-items: center; z-index: 2; transition: transform 0.8s cubic-bezier(0.45, 0, 0.55, 1); }
+        .cutout-item { width: 33.33%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 100px; filter: drop-shadow(0 20px 20px rgba(0,0,0,0.5)); animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        #auth-section, #main-app, #product-detail-page, #profile-page, #partner-form-page, #cart-panel, #info-view-page, #squad-tree-page, #payment-popup { display: none; }
+        .page-container { position: fixed; inset: 0; background: #000b1e; z-index: 5000; overflow-y: auto; padding-bottom: 80px; }
+        .custom-checkbox { width: 22px; height: 22px; border: 2px solid #0084ff; border-radius: 6px; appearance: none; cursor: pointer; position: relative; background: rgba(0,0,0,0.3); }
+        .custom-checkbox:checked { background-color: #0084ff; }
+        .custom-checkbox:checked::after { content: '✓'; position: absolute; color: white; font-size: 16px; top: -4px; left: 3px; font-weight: bold; }
+        .profile-pic-container { width: 120px; height: 120px; background: #0084ff; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 4px solid #000b1e; box-shadow: 0 0 20px rgba(0, 132, 255, 0.4); margin-bottom: 16px; }
+        #profile-img-show { width: 100%; height: 100%; object-fit: cover; display: none; }
+        #initial-text { font-size: 3rem; font-weight: bold; color: white; }
+        .product-card-animated { animation: fadeInUp 0.8s ease-out forwards; opacity: 0; transform: translateY(20px); }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .tree-node { padding: 12px; border-radius: 15px; font-size: 10px; margin-bottom: 10px; cursor: pointer; text-align: center; border: 1px solid transparent; transition: 0.3s; }
+        .node-green { border-color: #22c55e; color: #22c55e; background: rgba(34, 197, 94, 0.05); }
+        .node-red { border-color: #ef4444; color: #ef4444; background: rgba(239, 68, 68, 0.05); }
+    </style>
+</head>
+<body>
+
+    <div id="alert-popup" class="trending-popup glass p-8 rounded-[2.5rem] text-center">
+        <span class="close-icon" onclick="closeAlert()">&times;</span>
+        <div id="alert-icon" class="text-5xl mb-4"></div>
+        <h2 class="premium-font bright-blue text-[10px] mb-2">AviAn Notification</h2>
+        <p id="alert-msg" class="text-[11px] text-gray-300 mb-6"></p>
+        <button onclick="closeAlert()" class="w-full py-3 bg-bright-blue text-white rounded-2xl font-bold uppercase text-[9px]">Acknowledge</button>
+    </div>
+
+    <script>
+        // 1. Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCuTK5ewtBDGhOHlY2z3TV2MYeE7hrjkFA",
+            authDomain: "avian-f95a1.firebaseapp.com",
+            projectId: "avian-f95a1",
+            storageBucket: "avian-f95a1.firebasestorage.app",
+            messagingSenderId: "166193741362",
+            appId: "1:166193741362:web:7e583b228b49aa7c7d862b",
+            measurementId: "G-YKP24FWPP8"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // MLM Global Variables
+        let currentUser = null;
+        let referralID = new URLSearchParams(window.location.search).get('ref') || "";
+
+        // 2. Auth & Registration Logic (Advanced)
+        async function handleAuth() {
+            const name = document.getElementById('reg-name').value;
+            const pass = document.getElementById('reg-pass').value;
+            if(!name || !pass) return showAlert("Credentials required!", "🔐");
+
+            // MLM Logic: Using name as pseudo-email for your single file simplicity
+            const email = name.includes('@') ? name : `${name}@avian.com`;
+
+            try {
+                // Try Login
+                const userCredential = await auth.signInWithEmailAndPassword(email, pass);
+                loadUserData(userCredential.user.uid);
+            } catch (error) {
+                // If user not found, Register (MLM Signup)
+                if (error.code === 'auth/user-not-found') {
+                    try {
+                        const newUser = await auth.createUserWithEmailAndPassword(email, pass);
+                        await createNewUserRecord(newUser.user.uid, name);
+                        loadUserData(newUser.user.uid);
+                    } catch (regErr) {
+                        showAlert(regErr.message, "❌");
+                    }
+                } else {
+                    showAlert("Invalid Password or Error", "❌");
+                }
+            }
+        }
+
+        async function createNewUserRecord(uid, name) {
+            const myId = "AviAn-" + Math.floor(1000 + Math.random() * 9000);
+            await db.collection("users").doc(uid).set({
+                uid: uid,
+                name: name,
+                avianId: myId,
+                referredBy: referralID, // Storing Referral ID
+                earnings: 0,
+                isPartner: false,
+                squad: [],
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            // Commission Logic: If referred by someone, update their stats
+            if(referralID) {
+                const refSnapshot = await db.collection("users").where("avianId", "==", referralID).get();
+                if(!refSnapshot.empty) {
+                    const refDoc = refSnapshot.docs[0];
+                    await db.collection("users").doc(refDoc.id).update({
+                        squad: firebase.firestore.FieldValue.arrayUnion(myId)
+                    });
+                }
+            }
+        }
+
+        async function loadUserData(uid) {
+            const doc = await db.collection("users").doc(uid).get();
+            if(doc.exists) {
+                currentUser = doc.data();
+                updateUIWithData();
+            }
+        }
+
+        function updateUIWithData() {
+            document.getElementById('home-username').innerText = currentUser.name;
+            document.getElementById('profile-name').innerText = currentUser.name;
+            document.getElementById('initial-text').innerText = currentUser.name.charAt(0).toUpperCase();
+            document.getElementById('avian-id').innerText = currentUser.avianId;
+            document.getElementById('current-earning').innerText = "₹" + (currentUser.earnings || 0);
+            
+            // Dynamic Referral Link Generation
+            const refLink = `${window.location.origin}${window.location.pathname}?ref=${currentUser.avianId}`;
+            
+            // Add Referral Link to Profile UI (Adding purely via JS to keep your HTML clean)
+            if(!document.getElementById('share-link-btn')) {
+                const profileDiv = document.getElementById('profile-page');
+                const linkBtn = document.createElement('button');
+                linkBtn.id = "share-link-btn";
+                linkBtn.className = "w-full py-2 mt-2 bg-blue-900/30 text-[8px] rounded-lg border border-blue-500/20";
+                linkBtn.innerText = "Copy Referral Link: " + currentUser.avianId;
+                linkBtn.onclick = () => {
+                    navigator.clipboard.writeText(refLink);
+                    showAlert("Link Copied!", "🔗");
+                };
+                document.getElementById('id-box').appendChild(linkBtn);
+            }
+
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            
+            if(currentUser.isPartner) {
+                activatePartnerUI();
+            }
+        }
+
+        function activatePartnerUI() {
+            document.getElementById('badge-status').innerText = "Active Squad Member";
+            document.getElementById('badge-status').className = "mt-4 px-6 py-1 border border-green-500 text-green-500 rounded-full text-[9px] font-bold uppercase";
+            document.getElementById('biz-btn').style.display = 'none';
+            document.getElementById('active-options').style.display = 'flex';
+            document.getElementById('diamond-section').classList.remove('hidden');
+            document.getElementById('id-box').classList.remove('hidden');
+        }
+
+        // Overriding apnar original functions with Firebase Sync
+        async function completeRegistration() {
+            const name = document.getElementById('f-name').value;
+            if(!name) return showAlert("Fill Full Name!", "✍️");
+
+            // Update Firestore with Partner Info
+            await db.collection("users").doc(auth.currentUser.uid).update({
+                isPartner: true,
+                fullName: name,
+                mobile: document.getElementById('f-mobile').value,
+                // ... add other fields as needed
+            });
+
+            currentUser.isPartner = true;
+            confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
+            activatePartnerUI();
+            document.getElementById('partner-form-page').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+        }
+
+        // 
+        
+        // ... (Apnar bakia sob rendering ebong UI functions gulo ekhane thakbe, kono change charai) ...
+    </script>
+    
+    <script>
+        /* Apnar purono products, bannerAnimation, renderItems function gulo ekhane thakbe */
+    </script>
+</body>
+</html>
